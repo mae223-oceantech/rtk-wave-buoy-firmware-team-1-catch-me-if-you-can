@@ -97,8 +97,8 @@ Create a `secrets.h` file in the buoy_combo folder with your NTRIP credentials:
 #define SECRETS_H
 
 // WiFi credentials (used by esp32_rtk_wifi.ino)
-const char* ssid = "your_wifi_network";
-const char* password = "your_wifi_password";
+const char* ssid = "UCSD-GUEST";
+const char* password = "";
 
 // NTRIP caster credentials
 const char* casterHost = "rtk2go.com";
