@@ -57,18 +57,16 @@ secrets.h
 # Jupyter notebooks
 *.ipynb
 
-# Python scripts
-accelerometer/*.py
+# Instructor/dev-only code and data
+drewcode/
+matlab/
 
-# CSV data files
-accelerometer/*.csv
-
-# Instructor-only materials
-accelerometer/SENSOR_FUSION_NOTEBOOK_GUIDE.md
+# Local SD card data
+ola_data/
 
 # Claude settings
 **/.claude/
 
-# Local SD card data
-ola_data/
+# macOS
+.DS_Store
 
