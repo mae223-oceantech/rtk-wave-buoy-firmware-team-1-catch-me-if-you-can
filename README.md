@@ -1,6 +1,6 @@
 # RTK GPS Ocean Wave and Tide Measurements
 
-A centimeter-level precision GPS data logging system for oceanographic applications, combining RTK GPS positioning with IMU sensor data collection. Developed at UCSD Scripps Institution of Oceanography.
+A centimeter-level precision GPS data logging system for oceanographic applications, combining RTK GPS positioning with IMU sensor data collection. Developed at UCSD Scripps Institution of Oceanography and the Department of Mechnical Engineering both at U.C. San Diego.
 
 ## Overview
 
