@@ -57,6 +57,7 @@ secrets.h
 # Jupyter notebooks
 *.ipynb
 !accelerometer/magcal_notebook.ipynb
+!MAE223_sensor_lab.ipynb
 
 # Instructor/dev-only code and data
 drewcode/
