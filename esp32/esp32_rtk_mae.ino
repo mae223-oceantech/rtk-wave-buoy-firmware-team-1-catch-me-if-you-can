@@ -17,9 +17,10 @@
   Hardware:
     Sparkfun ESP32 Thing Plus + u-blox ZED-F9P
 
-  Wiring:
-    ESP32 GPIO 16 (RX1) to ZED-F9P TX
-    ESP32 GPIO 17 (TX1) to ZED-F9P RX
+  Wiring (matches buoy_combo / polaris — avoids GPIO 12 strapping conflict
+  because GPIO 12 is used as ESP32 TX, not RX, so F9P never drives it at boot):
+    ESP32 GPIO 27 (RX2) to ZED-F9P TX2
+    ESP32 GPIO 12 (TX2) to ZED-F9P RX2
     ESP32 GND to ZED-F9P GND
 
   ESP32 mechanics:
@@ -87,7 +88,7 @@ void setup()
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  Serial2.begin(115200, SERIAL_8N1, 16, 17); // RX=GPIO16, TX=GPIO17
+  Serial2.begin(115200, SERIAL_8N1, 27, 12); // RX=GPIO27, TX=GPIO12 (matches buoy_combo)
   if (myGNSS.begin(Serial2) == false) {
     Serial.println("ZED-F9P not detected on UART2. Check wiring/baud.");
     while(1);
@@ -157,13 +158,49 @@ void loop()
 }
 
 
-uint8_t calcNMEAChecksum(const char* sentence) {
-  uint8_t checksum = 0;
-  // Start after '$', stop before '*'
-  for (int i = 1; sentence[i] != '*' && sentence[i] != '\0'; i++) {
-    checksum ^= sentence[i];
+// Build NMEA GGA sentence from current ZED-F9P position.
+// Sent to the Polaris caster so VRS knows where to compute corrections.
+// If F9P has no fix yet, quality=0 is reported and Polaris will wait.
+String buildGGA() {
+  double lat = myGNSS.getLatitude()    / 10000000.0;
+  double lon = myGNSS.getLongitude()   / 10000000.0;
+  double alt = myGNSS.getAltitudeMSL() / 1000.0;
+  uint8_t fix     = myGNSS.getFixType();
+  uint8_t siv     = myGNSS.getSIV();
+  uint8_t carrier = myGNSS.getCarrierSolutionType();
+  uint8_t h = myGNSS.getHour();
+  uint8_t m = myGNSS.getMinute();
+  uint8_t s = myGNSS.getSecond();
+
+  // GGA quality: 0=invalid, 1=GPS, 4=RTK Fixed, 5=RTK Float
+  int quality = 0;
+  if (fix >= 2) {
+    if      (carrier == 2) quality = 4;
+    else if (carrier == 1) quality = 5;
+    else                   quality = 1;
   }
-  return checksum;
+
+  char latDir = (lat >= 0) ? 'N' : 'S';
+  double absLat = fabs(lat);
+  int latDeg    = (int)absLat;
+  double latMin = (absLat - latDeg) * 60.0;
+
+  char lonDir = (lon >= 0) ? 'E' : 'W';
+  double absLon = fabs(lon);
+  int lonDeg    = (int)absLon;
+  double lonMin = (absLon - lonDeg) * 60.0;
+
+  char body[128];
+  snprintf(body, sizeof(body),
+    "GPGGA,%02d%02d%02d.00,%02d%07.4f,%c,%03d%07.4f,%c,%d,%02d,1.0,%.2f,M,0.0,M,,",
+    h, m, s, latDeg, latMin, latDir, lonDeg, lonMin, lonDir, quality, siv, alt);
+
+  uint8_t checksum = 0;
+  for (int i = 0; body[i] != '\0'; i++) checksum ^= (uint8_t)body[i];
+
+  char sentence[140];
+  snprintf(sentence, sizeof(sentence), "$%s*%02X\r\n", body, checksum);
+  return String(sentence);
 }
 
 //Connect to NTRIP Caster, receive RTCM, and push to ZED module over I2C
@@ -331,20 +368,13 @@ void beginClient()
           Serial.print(F("Connected to "));
           Serial.println(casterHost);
           lastReceivedRTCM_ms = millis(); //Reset timeout
-          char gga[100];
-          snprintf(gga, sizeof(gga),
-            "$GPGGA,000000.00,3252.8000,N,11715.0000,W,1,08,1.0,0.0,M,0.0,M,,*00\r\n");
-          uint8_t cs = calcNMEAChecksum(gga);
-          char csStr[3];
-          snprintf(csStr, sizeof(csStr), "%02X", cs);
-          gga[strlen(gga) - 4] = csStr[0];
-          gga[strlen(gga) - 3] = csStr[1];
+
+          // Send initial GGA so Polaris VRS knows our position
+          String gga = buildGGA();
           ntripClient.print(gga);
           lastGGASent_ms = millis();
-          Serial.print(F("Sent initial GGA, checksum: "));
-          Serial.println(csStr);
-
-
+          Serial.print(F("Sent initial GGA: "));
+          Serial.print(gga);
         }
       } //End attempt to connect
     } //End connected == false
@@ -354,35 +384,13 @@ void beginClient()
       uint8_t rtcmData[512 * 4]; //Most incoming data is around 500 bytes but may be larger
       rtcmCount = 0;
 
-      // Send GGA to caster every 10 seconds
+      // Refresh GGA every 10s to keep Polaris VRS position current
       if (millis() - lastGGASent_ms > 10000)
       {
-        // Get current position from ZED
-        double lat = myGNSS.getLatitude() / 10000000.0;
-        double lon = myGNSS.getLongitude() / 10000000.0;
-        
-        // Only send if we have some fix
-        if (myGNSS.getFixType() > 0)
-        {
-          char gga[100];
-          // Simplified GGA - lat/lon only, Polaris just needs approximate position
-          int latDeg = (int)abs(lat);
-          double latMin = (abs(lat) - latDeg) * 60.0;
-          int lonDeg = (int)abs(lon);
-          double lonMin = (abs(lon) - lonDeg) * 60.0;
-          
-          snprintf(gga, sizeof(gga), "$GPGGA,000000.00,%02d%08.5f,%c,%03d%08.5f,%c,1,08,1.0,0.0,M,0.0,M,,*00\r\n",
-            latDeg, latMin, lat >= 0 ? 'N' : 'S',
-            lonDeg, lonMin, lon >= 0 ? 'E' : 'W');
-          uint8_t cs = calcNMEAChecksum(gga);
-          char csStr[3];
-          snprintf(csStr, sizeof(csStr), "%02X", cs);
-          gga[strlen(gga) - 4] = csStr[0];
-          gga[strlen(gga) - 3] = csStr[1];
-          ntripClient.print(gga);
-          lastGGASent_ms = millis();
-          Serial.println(F("GGA sent to caster"));
-        }
+        String gga = buildGGA();
+        ntripClient.print(gga);
+        lastGGASent_ms = millis();
+        Serial.println(F("GGA sent to caster"));
       }
 
       //Print any available RTCM data
