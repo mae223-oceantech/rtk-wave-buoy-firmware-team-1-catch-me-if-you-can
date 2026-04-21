@@ -129,7 +129,7 @@ RTK corrections are transmitted from base to rover using the **RTCM SC-104** bin
 |---------|---------|
 | RTCM 1004 | L1/L2 GPS observations (pseudorange + phase) |
 | RTCM 1012 | L1/L2 GLONASS observations |
-| RTCM 1074/1084/1094/1124 | MSM4/MSM7 — GPS/GLONASS/Galileo/BeiDou observations (modern, preferred) |
+| RTCM 1074/1084/1094/1124 | MSM4 — GPS/GLONASS/Galileo/BeiDou observations (modern, preferred; MSM7 variants are 1077/1087/1097/1127) |
 | RTCM 1005/1006 | Base station antenna position |
 | RTCM 1033 | Receiver/antenna descriptor |
 
@@ -162,7 +162,7 @@ Vertical accuracy is typically 1.5–2× worse than horizontal due to the geomet
 
 ## 8. The ZED-F9P in This System
 
-The ZED-F9P is a **concurrent dual-band** (L1 + L2/L5) multi-constellation receiver. Relevant specifications:
+The ZED-F9P is a **concurrent dual-band** (L1 + L2) multi-constellation receiver. Relevant specifications:
 
 - Tracks GPS L1C/A + L2C, GLONASS L1OF + L2OF, Galileo E1B/C + E5b, BeiDou B1I + B2I
 - Moving baseline RTK accuracy: 1 cm + 1 ppm CEP (horizontal)
@@ -178,6 +178,6 @@ The `carrier_solution` field in UBX-NAV-PVT (and in the OLA CSV log) directly re
 ## Further Reading
 
 - Teunissen, P.J.G. (1995). *The least-squares ambiguity decorrelation adjustment.* Journal of Geodesy, 70(1–2), 65–82. — Original LAMBDA paper
-- Leick, A., Rapoport, L., Tatarnikov, D. (2015). *GPS Satellite Surveying*, 4th ed. Wiley. — Standard graduate reference
+- Leick, A. (2015). *GPS Satellite Surveying*, 4th ed. Wiley. — Standard graduate reference
 - Misra, P., Enge, P. (2006). *Global Positioning System: Signals, Measurements and Performance*, 2nd ed. — Signal model depth
 - u-blox ZED-F9P Integration Manual — hardware-specific implementation details
