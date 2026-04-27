@@ -21,8 +21,8 @@ Point One Navigation's Polaris network, using either Arduino IDE or arduino-cli.
 Clone the repo on the computer connected to the ESP32:
 
 ```bash
-git clone git@github.com:missioncreep11/rtk-wave-buoy.git
-cd rtk-wave-buoy
+git clone https://github.com/mae223-oceantech/mae223-ocean-tech-2026-rtk-wave-buoy-firmware-mae223-ocean-tech-2026-rtk-wave-buoy-firmware-rtk-wave.git
+cd mae223-ocean-tech-2026-rtk-wave-buoy-firmware-mae223-ocean-tech-2026-rtk-wave-buoy-firmware-rtk-wave
 ```
 
 ---
